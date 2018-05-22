@@ -29,7 +29,7 @@ def _process_packet(packet, regex_engine, response):
 
 def _is_target_packet(packet, regex_engine):
 	#Apply the regex matching to the packet only if it is tcp
-	return re.search(regex_engine, packet[TCP][Raw].load)
+	return re.search(regex_engine, packet[TCP].load)
 
 def _inject_reply(packet, response_payload):
 	loaded_response =  Ether(
@@ -42,7 +42,7 @@ def _inject_reply(packet, response_payload):
 		) / TCP(
 		sport	=	packet[TCP].dport,
 		dport	=	packet[TCP].sport,
-		ack 	= 	packet[TCP].seq + len(packet[TCP][Raw].load),
+		ack 	= 	packet[TCP].seq + len(packet[TCP].load),
 		seq 	= 	packet[TCP].ack,
 		) / response_payload
 
