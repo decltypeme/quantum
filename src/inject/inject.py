@@ -29,12 +29,16 @@ def _process_packet(packet, regex_engine, response):
 
 def _is_target_packet(packet, regex_engine):
 	#Apply the regex matching to the packet only if it is tcp
-	return re.search(regex_engine, packet[TCP].load)
+	try:
+		return re.search(regex_engine, packet[TCP][Raw].load)
+	except:
+		return False
 
 def _inject_reply(packet, response_payload):
+	print("%s\n%s\n" % (packet[IP].src, packet[TCP][Raw].load))
 	loaded_response =  Ether(
-		src		=	packet[IP].dst,
-		dst 	=	packet[IP].src
+		src		=	packet[Ether].dst,
+		dst 	=	packet[Ether].src
 		) / IP(
 		src 	=	packet[IP].dst,
 		dst 	=	packet[IP].src,
@@ -42,7 +46,7 @@ def _inject_reply(packet, response_payload):
 		) / TCP(
 		sport	=	packet[TCP].dport,
 		dport	=	packet[TCP].sport,
-		ack 	= 	packet[TCP].seq + len(packet[TCP].load),
+		ack 	= 	packet[TCP].seq + len(packet[TCP][Raw].load),
 		seq 	= 	packet[TCP].ack,
 		) / response_payload
 
@@ -59,7 +63,7 @@ if __name__ == "__main__":
 		help="A regular expression to filter out packets")
 	parser.add_argument("-d", "--datafile", default="data/examples/payload.data",
 		help="The fake payload to be injected as response")
-	parser.add_argument("-e", "--expression", default="tcp and port 80", 
+	parser.add_argument("-e", "--expression", default="tcp", 
 		help="A berkeley packet filter describing the packets to be captured")
 	#Parse the command line arguments
 	args = parser.parse_args()
