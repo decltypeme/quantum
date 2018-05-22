@@ -19,11 +19,17 @@ def safe_close(signal, frame):
 
 signal.signal(signal.SIGINT, safe_close)
 
+
+"""
+The main functionality of the program.
+"""
 def inject_main(interface, regexp, datafile, exp):
 	response_file = open(args.datafile,'r')
 	response = response_file.read()
 	response_file.close()
+	#Compile the regex once, to be faster
 	regex_engine = re.compile(regexp)
+	#Sniffes from the given interface and filter out then apply the processing routine
 	sniff(
 		iface=interface,
 		filter=exp,
@@ -31,18 +37,23 @@ def inject_main(interface, regexp, datafile, exp):
 		)
 
 def _process_packet(packet, regex_engine, response):
+	#If the packet is a target packet, inject a response.
 	if(_is_target_packet(packet, regex_engine, response)):
 		_inject_reply(packet, response)
 
 def _is_target_packet(packet, regex_engine, response):
 	#Apply the regex matching to the packet only if it is tcp
 	try:
+		#Makes sure that
+		#1. The packet's TCP raw data matches the given regex
+		#2. It is not the fake payload, to avoid a cycle.
 		return re.search(regex_engine, packet[TCP][Raw].load) != None and packet[TCP][Raw].load != response
 	except:
 		return False
 
 def _inject_reply(packet, response_payload):
 	print("Detected a request from: %s" % (packet[IP].src))
+	#Construct the response packet by exchanging source and destination fields
 	loaded_response =  Ether(
 		src		=	packet[Ether].dst,
 		dst 	=	packet[Ether].src
