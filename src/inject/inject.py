@@ -6,8 +6,15 @@ import signal
 import sys
 
 
+
+total_injected_packets = 0
+
+"""
+Catches the Ctrl + C signal. Used to print out statstics at the end.
+"""
 def safe_close(signal, frame):
-        print('User requested to close ')
+        print('User requested to close..')
+        print('Total Injected Packets: %d' %(total_injected_packets))
         sys.exit(0)
 
 signal.signal(signal.SIGINT, safe_close)
@@ -52,6 +59,7 @@ def _inject_reply(packet, response_payload):
 		) / Raw(load = response_payload)
 	print("Sending a spoofed reply to: %s" % (loaded_response[IP].dst))
 	sendp(loaded_response)
+	total_injected_packets += 1
 	#print("%s\n%s\n%s\n" % (response_payload, loaded_response[IP].src, loaded_response[TCP][Raw].load))
 
 
