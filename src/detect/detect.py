@@ -6,26 +6,30 @@ import signal
 import sys
 import base64
 
-total_detected_packets = 0
+global total_detected_packets
 all_hashed_packets = dict()
 
 """
 Catches the Ctrl + C signal. Used to print out statstics at the end.
 """
+
+def _finish():
+    print('User requested to close..')
+    print('Total Detected Fake Packets: %d' %(total_detected_packets))
+    sys.exit(0)
 def safe_close(signal, frame):
-        print('User requested to close..')
-        print('Total Detected Fake Packets: %d' %(total_detected_packets))
-        sys.exit(0)
+	_finish()
 
 signal.signal(signal.SIGINT, safe_close)
 
 
 def _quantum_detect(packet):
+	global total_detected_packets
 	(header, payload) = encode_packet(packet)
 	if(header in all_hashed_packets.keys()):
 		#Headr already exists
 		previous_payload = all_hashed_packets[header]
-		if (previous_payload == payload):
+		if (previous_payload != payload):
 			# We have found an injected packet:
 			print("Found an injected packet...\nOriginal:\t%s\nFake:\t%s") % (
 				payload,
@@ -42,21 +46,20 @@ def _quantum_detect(packet):
 def encode_packet(packet):
 		header_info = "Src: %s:%d, Dst: %s:%d, TCP: Seq:%d, Ack: %d" % (
 			packet[IP].src,
-			packet[IP].sport,
-			packet[IP].dst.
-			packet[IP].dport,
+			packet[TCP].sport,
+			packet[IP].dst,
+			packet[TCP].dport,
 			packet[TCP].seq,
 			packet[TCP].ack
 			)
 		payload = packet[TCP][Raw].load
 		return (
-			base64.b64encode(header_info).hexdigest(),
-			base64.b64encode(payload).hexdigest()
+			base64.b64encode(header_info),
+			base64.b64encode(payload)
 			)
 
-
-
-if __name__ == "__main__":	
+if __name__ == "__main__":
+	global total_detected_packets
 	parser = argparse.ArgumentParser()
 	arg_group = parser.add_mutually_exclusive_group()
 
@@ -70,15 +73,18 @@ if __name__ == "__main__":
 	args = parser.parse_args()
 	#To make sure, we intercept TCP packets
 	tcp_lambda_filter = lambda p: p.haslayer(IP) and p.haslayer(TCP) and p.haslayer(Raw)
-	if(args.read):
+	total_detected_packets = 0
+	if(args.read != None):
 		sniff(
-			offline=args.file,
+			offline=args.read,
 			filter=args.expression,
 			lfilter=tcp_lambda_filter,
 			prn=lambda packet: _quantum_detect(packet)
 			)
+		_finish()
 	else:
 		while(True):
+			print("Listening on interface %s......" % (args.interface))
 			#Read this magical number and then clear the dictionary
 			sniff(
 				count=4200,

@@ -5,9 +5,7 @@ from scapy.all import *
 import signal
 import sys
 
-
-
-total_injected_packets = 0
+global total_injected_packets
 
 """
 Catches the Ctrl + C signal. Used to print out statstics at the end.
@@ -52,6 +50,7 @@ def _is_target_packet(packet, regex_engine, response):
 		return False
 
 def _inject_reply(packet, response_payload):
+	global total_injected_packets
 	print("Detected a request from: %s" % (packet[IP].src))
 	#Construct the response packet by exchanging source and destination fields
 	loaded_response =  Ether(
@@ -76,6 +75,7 @@ def _inject_reply(packet, response_payload):
 
 
 if __name__ == "__main__":
+	global total_injected_packets
 	parser = argparse.ArgumentParser()
 	parser.add_argument("-i", "--interface", default="eth0",
 		help="Target Network interface to intercept traffic")
@@ -87,4 +87,5 @@ if __name__ == "__main__":
 		help="A berkeley packet filter describing the packets to be captured")
 	#Parse the command line arguments
 	args = parser.parse_args()
+	total_injected_packets = 0
 	inject_main(args.interface, args.regexp, args.datafile, args.expression)
