@@ -9,14 +9,14 @@ import base64
 global total_detected_packets
 all_hashed_packets = dict()
 
-"""
-Catches the Ctrl + C signal. Used to print out statstics at the end.
-"""
-
 def _finish():
     print('User requested to close..')
     print('Total Detected Fake Packets: %d' %(total_detected_packets))
     sys.exit(0)
+
+"""
+Catches the Ctrl + C signal. Used to print out statstics at the end.
+"""    
 def safe_close(signal, frame):
 	_finish()
 
